@@ -1,0 +1,57 @@
+---
+# get next available vlan via script
+- hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - name: get next available vlan
+    command: python ./nxapi_vlan.py
+    register: vlan
+
+  - debug: var=vlan.stdout
+
+  - name: test set-fact
+    set_fact: veelan="{{vlan.stdout}}"
+
+
+# perform plays on all [cisco] hosts in inventory
+- hosts:
+    - nxos
+  gather_facts: no
+  connection: local
+  vars_files:
+    - secrets.yaml
+
+  # Here are the individual plays
+  tasks:
+
+  # get credentials for devices and set current timestamp
+  #	for use in saving output
+  - name: Define Provider and Timestamp
+    set_fact:
+      provider:
+        host: "{{ hostvars[inventory_hostname].ansible_host|default(inventory_hostname) }}"
+        username: "{{ creds['username'] }}"
+        password: "{{ creds['password'] }}"
+        auth_pass: "{{ creds['auth_pass'] }}"
+
+  - debug: msg="{{ hostvars['localhost'] }}"
+  - debug: msg="{{ hostvars['localhost']['vlan']['stdout'] }}"
+  - debug: msg="{{ hostvars['localhost']['veelan'] }}"
+
+  # NXOS command via cli or api
+  - name: Add new vlan to NXOS
+    nxos_config:
+      provider: "{{ provider }}"
+      # transport: cli
+      transport: nxapi
+      lines:
+        - "name ansible{{ hostvars['localhost']['vlan']['stdout'] }}"
+      parents:
+        - "vlan {{ hostvars['localhost']['vlan']['stdout'] }}"
+      replace: block
+    register: output 
+
+  - debug: var=output

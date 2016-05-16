@@ -1,0 +1,13 @@
+---
+# create different configs based on even/odd number of store
+- hosts: localhost
+  # should fail without this: 
+  connection: local
+
+  tasks:
+  - name: Get list of stores from inventory
+    include_vars: ./stores.yaml
+
+  - name: Create config based on template and store number
+    template: src=./store_config_template.j2 dest=~/Downloads/config_st{{ item.store }}.txt
+    with_items: "{{ stores }}"

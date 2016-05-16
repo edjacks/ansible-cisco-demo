@@ -1,0 +1,5 @@
+---
+commands:
+  - command: show version
+  - command: show interface description
+  - command: show interface

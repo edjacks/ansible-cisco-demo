@@ -1,0 +1,33 @@
+---
+# perform plays on all [cisco] hosts in inventory
+- hosts:
+    - nxos
+  gather_facts: no
+  connection: local
+  vars_files:
+    - secrets.yaml
+
+  # Here are the individual plays
+  tasks:
+
+  # get credentials for devices and set current timestamp
+  #	for use in saving output
+  - name: Define Provider and Timestamp
+    set_fact:
+      provider:
+        host: "{{ hostvars[inventory_hostname].ansible_host|default(inventory_hostname) }}"
+        username: "{{ creds['username'] }}"
+        password: "{{ creds['password'] }}"
+        auth_pass: "{{ creds['auth_pass'] }}"
+
+  # NXOS command via cli or api
+  - name: SCP current config for NXOS devices
+    nxos_command:
+      provider: "{{ provider }}"
+      transport: cli
+      # transport: nxapi
+      commands:
+        - show ip route vrf all
+    register: output 
+
+  - debug: var=output

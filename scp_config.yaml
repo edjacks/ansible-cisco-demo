@@ -1,0 +1,57 @@
+---
+# get current timestamp from localhost
+- hosts: localhost
+  connection: local
+
+# perform plays on all [cisco] hosts in inventory
+- hosts:
+    - cisco
+  gather_facts: no
+  connection: local
+  vars_files:
+    - secrets.yaml
+
+  # Here are the individual plays
+  tasks:
+
+  # get credentials for devices and set current timestamp
+  #	for use in saving output
+  - name: Define Provider and Timestamp
+    set_fact:
+      provider:
+        host: "{{ hostvars[inventory_hostname].ansible_host|default(inventory_hostname) }}"
+        username: "{{ creds['username'] }}"
+        password: "{{ creds['password'] }}"
+        auth_pass: "{{ creds['auth_pass'] }}"
+
+      ts: "{{ hostvars['localhost'].ansible_date_time.iso8601_basic_short }}"
+
+  # Keep IOS device from asking for approval to SCP config
+  - name: config file prompt quiet for IOS devices
+    ios_config:
+      provider: "{{ provider }}"
+      authorize: yes
+      lines:
+        - file prompt quiet
+    when: host_type == "ios"
+
+  # SCP current config from IOS device
+  - name: SCP current config for IOS devices
+    ios_command:
+      provider: "{{ provider }}"
+      commands:
+        - "copy running-config scp://cisco:cisco@10.10.10.2/Downloads/{{ inventory_hostname }}-{{ ts }}.config"
+    when: host_type == "ios"
+    register: output 
+
+  # SCP current config from NXOS device
+  #	requires RSA public key from NXOS to be included
+  #	in ~/.ssh/authorized_keys of target host
+  - name: SCP current config for NXOS devices
+    nxos_command:
+      provider: "{{ provider }}"
+      transport: cli
+      commands:
+        - "copy running-config scp://cisco@10.10.10.2/Downloads/{{ inventory_hostname }}-{{ ts }}.config vrf default"
+    when: host_type == "nxos"
+    register: output 

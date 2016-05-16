@@ -1,0 +1,42 @@
+---
+# walk through plays for a given [group] in hosts file
+- hosts: ios-b
+  gather_facts: no
+  connection: local
+  vars_files:
+    - secrets.yaml
+
+  tasks:
+  - name: Define Provider and Timestamp
+    set_fact:
+      provider:
+        host: "{{ hostvars[inventory_hostname].ansible_host|default(inventory_hostname) }}"
+        username: "{{ creds['username'] }}"
+        password: "{{ creds['password'] }}"
+        auth_pass: "{{ creds['auth_pass'] }}"
+
+  - name: Add Route Map
+    ios_config:
+      provider: "{{ provider }}"
+      authorize: yes
+      lines:
+        - match ip address 2
+        - set ip precedence critical
+        - set ip next-hop 1.1.1.1
+      parents: ['route-map TEST_MAP']
+      before:
+        - route-map TEST_MAP
+        - no route-map TEST_MAP
+    register: output 
+
+  - debug: var=output
+
+
+  - name: Verify Route Map
+    ios_command:
+      provider: "{{ provider }}"
+      commands:
+        - show route-map TEST_MAP
+    register: output
+
+  - debug: var=output

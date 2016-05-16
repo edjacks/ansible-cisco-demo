@@ -1,0 +1,25 @@
+---
+- hosts: ios-a
+  gather_facts: no
+  connection: local
+  vars_files:
+    - secrets.yaml
+
+  tasks:
+  - name: Define Provider and Timestamp
+    set_fact:
+      provider:
+        host: "{{ hostvars[inventory_hostname].ansible_host|default(inventory_hostname) }}"
+        username: "{{ creds['username'] }}"
+        password: "{{ creds['password'] }}"
+        auth_pass: "{{ creds['auth_pass'] }}"
+
+  - name: Compare running-config to template, change if necessary
+    ios_template:
+      provider: "{{ provider }}"
+      authorize: true
+      backup: true
+      src: "{{ inventory_hostname }}.candidate_config.txt"
+    register: output
+
+  - debug: var=output

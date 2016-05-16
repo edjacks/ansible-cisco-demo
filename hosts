@@ -1,0 +1,26 @@
+[local]
+localhost
+
+[switches]
+switch ansible_host=10.255.0.101
+
+[ios]
+ios-b ansible_host=10.255.0.98
+ios-a ansible_host=10.255.0.99
+
+[nxos]
+nxos ansible_host=10.255.0.94
+
+[cisco:children]
+switches
+ios
+nxos
+
+[switches:vars]
+host_type=ios
+
+[ios:vars]
+host_type=ios
+
+[nxos:vars]
+host_type=nxos

@@ -1,0 +1,49 @@
+---
+# get current timestamp from localhost
+- hosts: localhost
+  connection: local
+
+
+# walk through plays for a given [group] in hosts file
+- hosts: ios
+  gather_facts: no
+  connection: local
+  vars_files:
+    - secrets.yaml
+    - ios_command_sample_commands.yaml
+
+  tasks:
+  - name: Define Provider and Timestamp
+    set_fact:
+      provider:
+        host: "{{ hostvars[inventory_hostname].ansible_host|default(inventory_hostname) }}"
+        username: "{{ creds['username'] }}"
+        password: "{{ creds['password'] }}"
+        auth_pass: "{{ creds['auth_pass'] }}"
+
+      ts: "{{ hostvars['localhost'].ansible_date_time.iso8601_basic_short }}"
+
+
+  - name: Run Command From List In Playbook
+    ios_command:
+      provider: "{{ provider }}"
+      commands:
+        - show ip interface brief
+    register: output 
+
+  - debug: var=output
+
+
+  - name: Run Command From List Separate File
+    ios_command:
+      provider: "{{ provider }}"
+      commands:
+        "{{ item.command }}"
+    with_items:
+      "{{ commands }}"
+    register: output
+
+  # - debug: var=output
+
+  - name: Save full data to file
+    copy: content="{{ output }}" dest="~/Downloads/commands_{{ inventory_hostname }}-{{ts}}.json"
